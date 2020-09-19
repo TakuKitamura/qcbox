@@ -1,7 +1,7 @@
 use rand::Rng;
 
 // 振幅
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 struct Amplitude{
   magnitude: f32, // 0.0 ~ 1.0
   relative_topology: f32 // 0 ~ 2π
@@ -14,7 +14,7 @@ struct ComplexNumber{
 }
 
 // キュービット
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 struct Qbit{ // zero + one <= 1
   zero: Amplitude, // zero <= 1
   one: Amplitude // one <= 1
@@ -27,7 +27,7 @@ struct ExistenceProbability{
   one: f32
 }
 
-const zero_qbit: Qbit = Qbit {
+const ZERO_QBIT: Qbit = Qbit {
   zero: Amplitude{
     magnitude: 1.0,
     relative_topology: 0.0
@@ -38,7 +38,7 @@ const zero_qbit: Qbit = Qbit {
   }
 };
 
-const one_qbit: Qbit = Qbit {
+const ONE_QBIT: Qbit = Qbit {
   zero: Amplitude{
     magnitude: 0.0,
     relative_topology: 0.0
@@ -64,13 +64,22 @@ fn qc_read(qc: Qbit) -> Qbit {
   let mut rng: rand::rngs::ThreadRng = rand::thread_rng();
   let random_float: f32 = rng.gen(); // 0~1
   if random_float < ep.zero { // zero
-    return zero_qbit
+    return ZERO_QBIT
   } else { // one
-    return one_qbit
+    return ONE_QBIT
   }
 }
 
-fn qc_write(){}
+// target: ZERO_QBIT or ONE_QBIT
+fn qc_write(qc: Qbit, target_qbit: Qbit) -> Qbit{
+  // write命令は, readとnot命令で実現できる
+  let read_qbit = qc_read(qc);
+  if read_qbit == target_qbit {
+    return target_qbit;
+  } else {
+    return qc_not(read_qbit)
+  }
+}
 
 fn qc_not(qc: Qbit) -> Qbit{
   // swap するだけ
@@ -96,11 +105,12 @@ fn main() {
     }
   };
 
-  println!("{:?}", qc_read(qc))
+  println!("{:?}", qc_write(qc, ONE_QBIT))
 }
 
 #[test]
 fn qc_not_test() {
+  // あくまでもテスト用のQbit
   let qc = Qbit {
     zero: Amplitude{
       magnitude: 0.1,
@@ -116,4 +126,22 @@ fn qc_not_test() {
   assert_eq!(not_qc.zero.relative_topology, 0.4);
   assert_eq!(not_qc.one.magnitude, 0.1);
   assert_eq!(not_qc.one.relative_topology, 0.2);
+}
+
+#[test]
+fn qc_write_test() {
+  let qc: Qbit = Qbit {
+    zero: Amplitude{
+      magnitude: 0.707,
+      relative_topology: 0.0
+    },
+    one: Amplitude{
+      magnitude: 0.707,
+      relative_topology: 0.0
+    }
+  };
+  let zero = qc_write(qc, ZERO_QBIT);
+  assert_eq!(zero, ZERO_QBIT);
+  let one = qc_write(zero, ONE_QBIT);
+  assert_eq!(one, ONE_QBIT);
 }
