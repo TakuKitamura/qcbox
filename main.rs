@@ -3,14 +3,14 @@ use rand::Rng;
 // 振幅
 #[derive(Debug, PartialEq)]
 struct Amplitude{
-  magnitude: f32, // 0.0 ~ 1.0
-  relative_topology: f32 // 0 ~ 2π
+  magnitude: f64, // 0.0 ~ 1.0
+  relative_topology: f64 // 0 ~ 2π
 }
 
 // 複素数
 struct ComplexNumber{
-  real: f32,
-  imaginary: f32
+  real: f64,
+  imaginary: f64
 }
 
 // キュービット
@@ -23,8 +23,8 @@ struct Qbit{ // zero + one <= 1
 // フォトンが検出される確率
 #[derive(Debug)]
 struct ExistenceProbability{
-  zero: f32,
-  one: f32
+  zero: f64,
+  one: f64
 }
 
 const ZERO_QBIT: Qbit = Qbit {
@@ -62,7 +62,7 @@ fn qc_read(qc: Qbit) -> Qbit {
 
   // 本物の量子コンピュータであれば, 本当の意味での乱数となる
   let mut rng: rand::rngs::ThreadRng = rand::thread_rng();
-  let random_float: f32 = rng.gen(); // 0~1
+  let random_float: f64 = rng.gen(); // 0~1
   if random_float < ep.zero { // zero
     return ZERO_QBIT
   } else { // one
