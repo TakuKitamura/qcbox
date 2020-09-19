@@ -27,6 +27,28 @@ struct ExistenceProbability{
   one: f32
 }
 
+const zero_qbit: Qbit = Qbit {
+  zero: Amplitude{
+    magnitude: 1.0,
+    relative_topology: 0.0
+  },
+  one: Amplitude{
+    magnitude: 0.0,
+    relative_topology: 0.0
+  }
+};
+
+const one_qbit: Qbit = Qbit {
+  zero: Amplitude{
+    magnitude: 0.0,
+    relative_topology: 0.0
+  },
+  one: Amplitude{
+    magnitude: 1.0,
+    relative_topology: 0.0
+  }
+};
+
 fn get_existence_probability(qc: Qbit) -> ExistenceProbability{
   return ExistenceProbability{
     zero: qc.zero.magnitude.powf(2.0),
@@ -34,7 +56,7 @@ fn get_existence_probability(qc: Qbit) -> ExistenceProbability{
   }
 }
 
-fn qc_read(qc: Qbit) -> u32 {
+fn qc_read(qc: Qbit) -> Qbit {
   let ep: ExistenceProbability = 
     get_existence_probability(qc);
 
@@ -42,9 +64,9 @@ fn qc_read(qc: Qbit) -> u32 {
   let mut rng: rand::rngs::ThreadRng = rand::thread_rng();
   let random_float: f32 = rng.gen(); // 0~1
   if random_float < ep.zero { // zero
-    return 0
+    return zero_qbit
   } else { // one
-    return 1
+    return one_qbit
   }
 }
 
