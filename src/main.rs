@@ -1,19 +1,25 @@
 mod qc;
-use num_complex::Complex;
 fn main() {
-  let qc: qc::Qbit = qc::Qbit {
-    zero: Some(Complex::new(0.0, 0.0)),
-    one: Some(Complex::new(1.0, 0.0)),
+  let undefined_qc: qc::Qbit = qc::Qbit {
+    zero: None,
+    one: None,
   };
-  println!("had(had(qc))");
-  println!("{:?}", qc::get_amplitude(&qc.zero));
-  println!("{:?}", qc::get_amplitude(&qc.one));
-
+  let qc = qc::qc_write(undefined_qc, qc::ONE_QBIT);
+  println!("-- WRITE 1 --");
+  println!("{:?}", qc::get_amplitude(&qc.zero).unwrap());
+  println!("{:?}", qc::get_amplitude(&qc.one).unwrap());
   let qc = qc::qc_had(qc);
-  println!("{:?}", qc::get_amplitude(&qc.zero));
-  println!("{:?}", qc::get_amplitude(&qc.one));
-
+  println!("-- HAD --");
+  println!("{:?}", qc::get_amplitude(&qc.zero).unwrap());
+  println!("{:?}", qc::get_amplitude(&qc.one).unwrap());
   let qc = qc::qc_had(qc);
-  println!("{:?}", qc::get_amplitude(&qc.zero));
-  println!("{:?}", qc::get_amplitude(&qc.one));
+  println!("-- HAD --");
+  println!("{:?}", qc::get_amplitude(&qc.zero).unwrap());
+  println!("{:?}", qc::get_amplitude(&qc.one).unwrap());
+  println!("-- READ --");
+  if qc::qc_read(qc) == qc::ZERO_QBIT {
+    println!("READ ZERO!!")
+  } else {
+    println!("READ ONE!!")
+  };
 }

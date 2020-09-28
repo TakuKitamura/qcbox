@@ -23,13 +23,13 @@ pub struct ExistenceProbability {
   one: f64,
 }
 
-const ZERO_QBIT: Qbit = Qbit {
+pub const ZERO_QBIT: Qbit = Qbit {
   zero: Some(Complex::new(1.0, 0.0)),
-  one: None,
+  one: Some(Complex::new(0.0, 0.0)),
 };
 
-const ONE_QBIT: Qbit = Qbit {
-  zero: None,
+pub const ONE_QBIT: Qbit = Qbit {
+  zero: Some(Complex::new(0.0, 0.0)),
   one: Some(Complex::new(1.0, 0.0)),
 };
 
