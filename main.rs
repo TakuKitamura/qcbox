@@ -1,3 +1,4 @@
+use num_complex::Complex;
 use rand::Rng;
 
 // 振幅
@@ -7,19 +8,12 @@ struct Amplitude {
   relative_topology: f64, // 0 ~ 2π
 }
 
-// 複素数
-#[derive(Debug, PartialEq)]
-struct ComplexNumber {
-  real: f64,
-  imaginary: f64,
-}
-
 // キュービット
 #[derive(Debug, PartialEq)]
 struct Qbit {
   // zero + one <= 1
-  zero: Option<ComplexNumber>, // zero <= 1
-  one: Option<ComplexNumber>,  // one <= 1
+  zero: Option<Complex<f64>>, // zero <= 1
+  one: Option<Complex<f64>>,  // one <= 1
 }
 
 // フォトンが検出される確率
@@ -30,19 +24,13 @@ struct ExistenceProbability {
 }
 
 const ZERO_QBIT: Qbit = Qbit {
-  zero: Some(ComplexNumber {
-    real: 1.0,
-    imaginary: 0.0,
-  }),
+  zero: Some(Complex::new(1.0, 0.0)),
   one: None,
 };
 
 const ONE_QBIT: Qbit = Qbit {
   zero: None,
-  one: Some(ComplexNumber {
-    real: 1.0,
-    imaginary: 0.0,
-  }),
+  one: Some(Complex::new(1.0, 0.0)),
 };
 
 const PI: f64 = std::f64::consts::PI;
@@ -53,8 +41,8 @@ fn round(x: f64, n: u8) -> f64 {
   return (x * scale).round() / scale;
 }
 
-fn get_relative_topology(cn: &ComplexNumber) -> f64 {
-  let mut relative_topology = (cn.imaginary / cn.real).atan();
+fn get_relative_topology(cn: &Complex<f64>) -> f64 {
+  let mut relative_topology = (cn.im / cn.re).atan();
   if relative_topology < 0.0 {
     // +表示に変換
     relative_topology += PI;
@@ -62,12 +50,12 @@ fn get_relative_topology(cn: &ComplexNumber) -> f64 {
   return relative_topology;
 }
 
-fn get_amplitude(cn: &Option<ComplexNumber>) -> Option<Amplitude> {
+fn get_amplitude(cn: &Option<Complex<f64>>) -> Option<Amplitude> {
   match cn {
     Some(cn) => {
       let relative_topology: f64 = get_relative_topology(cn);
       return Some(Amplitude {
-        magnitude: (cn.real.powf(2.0) + cn.imaginary.powf(2.0)).sqrt(),
+        magnitude: (cn.re.powf(2.0) + cn.im.powf(2.0)).sqrt(),
         relative_topology: relative_topology,
       });
     }
@@ -134,10 +122,10 @@ fn qc_phase(qc: Qbit, rad: f64) -> Qbit {
       let update_relative_topology: f64 = get_relative_topology(&one) + rad;
       return Qbit {
         zero: qc.zero,
-        one: Some(ComplexNumber {
-          real: one.real * update_relative_topology.cos(),
-          imaginary: one.real * update_relative_topology.sin(),
-        }),
+        one: Some(Complex::new(
+          one.re * update_relative_topology.cos(),
+          one.re * update_relative_topology.sin(),
+        )),
       };
     }
     None => Qbit {
@@ -148,15 +136,11 @@ fn qc_phase(qc: Qbit, rad: f64) -> Qbit {
 }
 
 fn main() {
+  // num_complex::Complex
+  let complex_integer = Complex::new(10.0, 20.0);
   let qc: Qbit = Qbit {
-    zero: Some(ComplexNumber {
-      real: 0.5,
-      imaginary: 0.0,
-    }),
-    one: Some(ComplexNumber {
-      real: 0.5,
-      imaginary: 0.0,
-    }),
+    zero: Some(Complex::new(0.5, 0.0)),
+    one: Some(Complex::new(0.5, 0.0)),
   };
   println!("{:?}\n", round(1.23456, 2));
 }
@@ -164,35 +148,23 @@ fn main() {
 #[test]
 fn qc_not_test() {
   let qc: Qbit = Qbit {
-    zero: Some(ComplexNumber {
-      real: 0.1,
-      imaginary: 0.2,
-    }),
-    one: Some(ComplexNumber {
-      real: 0.3,
-      imaginary: 0.4,
-    }),
+    zero: Some(Complex::new(0.1, 0.2)),
+    one: Some(Complex::new(0.3, 0.4)),
   };
   let not_qc = qc_not(qc);
   let not_qc_zero = not_qc.zero.unwrap();
   let not_qc_one = not_qc.one.unwrap();
-  assert_eq!(not_qc_zero.real, 0.3);
-  assert_eq!(not_qc_zero.imaginary, 0.4);
-  assert_eq!(not_qc_one.real, 0.1);
-  assert_eq!(not_qc_one.imaginary, 0.2);
+  assert_eq!(not_qc_zero.re, 0.3);
+  assert_eq!(not_qc_zero.im, 0.4);
+  assert_eq!(not_qc_one.re, 0.1);
+  assert_eq!(not_qc_one.im, 0.2);
 }
 
 #[test]
 fn qc_write_test() {
   let qc: Qbit = Qbit {
-    zero: Some(ComplexNumber {
-      real: 0.1,
-      imaginary: 0.2,
-    }),
-    one: Some(ComplexNumber {
-      real: 0.3,
-      imaginary: 0.4,
-    }),
+    zero: Some(Complex::new(0.1, 0.2)),
+    one: Some(Complex::new(0.3, 0.4)),
   };
   let zero = qc_write(qc, ZERO_QBIT);
   assert_eq!(zero, ZERO_QBIT);
@@ -203,38 +175,26 @@ fn qc_write_test() {
 #[test]
 fn qc_phase_test() {
   let qc: Qbit = Qbit {
-    zero: Some(ComplexNumber {
-      real: 0.5,
-      imaginary: 0.0,
-    }),
-    one: Some(ComplexNumber {
-      real: 0.5,
-      imaginary: 0.0,
-    }),
+    zero: Some(Complex::new(0.5, 0.0)),
+    one: Some(Complex::new(0.5, 0.0)),
   };
   let phase_qc = qc_phase(qc, PI / 2.0);
   let phase_qc_zero = phase_qc.zero.unwrap();
-  assert_eq!(phase_qc_zero.real, 0.5);
-  assert_eq!(phase_qc_zero.imaginary, 0.0);
+  assert_eq!(phase_qc_zero.re, 0.5);
+  assert_eq!(phase_qc_zero.im, 0.0);
   let phase_qc_one = phase_qc.one.unwrap();
-  assert_eq!(round(phase_qc_one.real, 2), 0.0);
-  assert_eq!(phase_qc_one.imaginary, 0.5);
+  assert_eq!(round(phase_qc_one.re, 2), 0.0);
+  assert_eq!(phase_qc_one.im, 0.5);
 
   let qc: Qbit = Qbit {
-    zero: Some(ComplexNumber {
-      real: 0.5,
-      imaginary: 0.0,
-    }),
-    one: Some(ComplexNumber {
-      real: 0.5,
-      imaginary: 0.0,
-    }),
+    zero: Some(Complex::new(0.5, 0.0)),
+    one: Some(Complex::new(0.5, 0.0)),
   };
   let phase_qc = qc_phase(qc, (-PI) / 2.0);
   let phase_qc_zero = phase_qc.zero.unwrap();
-  assert_eq!(phase_qc_zero.real, 0.5);
-  assert_eq!(phase_qc_zero.imaginary, 0.0);
+  assert_eq!(phase_qc_zero.re, 0.5);
+  assert_eq!(phase_qc_zero.im, 0.0);
   let phase_qc_one = phase_qc.one.unwrap();
-  assert_eq!(round(phase_qc_one.real, 2), 0.0);
-  assert_eq!(phase_qc_one.imaginary, -0.5);
+  assert_eq!(round(phase_qc_one.re, 2), 0.0);
+  assert_eq!(phase_qc_one.im, -0.5);
 }
