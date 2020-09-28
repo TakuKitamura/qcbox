@@ -135,16 +135,6 @@ fn qc_phase(qc: Qbit, rad: f64) -> Qbit {
   }
 }
 
-fn main() {
-  // num_complex::Complex
-  let complex_integer = Complex::new(10.0, 20.0);
-  let qc: Qbit = Qbit {
-    zero: Some(Complex::new(0.5, 0.0)),
-    one: Some(Complex::new(0.5, 0.0)),
-  };
-  println!("{:?}\n", round(1.23456, 2));
-}
-
 #[test]
 fn qc_not_test() {
   let qc: Qbit = Qbit {
@@ -159,7 +149,6 @@ fn qc_not_test() {
   assert_eq!(not_qc_one.re, 0.1);
   assert_eq!(not_qc_one.im, 0.2);
 }
-
 #[test]
 fn qc_write_test() {
   let qc: Qbit = Qbit {
@@ -171,7 +160,6 @@ fn qc_write_test() {
   let one = qc_write(zero, ONE_QBIT);
   assert_eq!(one, ONE_QBIT);
 }
-
 #[test]
 fn qc_phase_test() {
   let qc: Qbit = Qbit {
