@@ -3,22 +3,22 @@ use rand::Rng;
 
 // 振幅
 #[derive(Debug, PartialEq)]
-struct Amplitude {
+pub struct Amplitude {
   magnitude: f64,         // 0.0 ~ 1.0
   relative_topology: f64, // 0 ~ 2π
 }
 
 // キュービット
 #[derive(Debug, PartialEq)]
-struct Qbit {
+pub struct Qbit {
   // zero + one <= 1
-  zero: Option<Complex<f64>>, // zero <= 1
-  one: Option<Complex<f64>>,  // one <= 1
+  pub zero: Option<Complex<f64>>, // zero <= 1
+  pub one: Option<Complex<f64>>,  // one <= 1
 }
 
 // フォトンが検出される確率
 #[derive(Debug)]
-struct ExistenceProbability {
+pub struct ExistenceProbability {
   zero: f64,
   one: f64,
 }
@@ -33,24 +33,30 @@ const ONE_QBIT: Qbit = Qbit {
   one: Some(Complex::new(1.0, 0.0)),
 };
 
-const PI: f64 = std::f64::consts::PI;
-const TWO_PI: f64 = 2.0 * PI;
+pub const PI: f64 = std::f64::consts::PI;
+
+const SQRT_2: f64 = std::f64::consts::SQRT_2;
 
 fn round(x: f64, n: u8) -> f64 {
   let scale = (10.0 as f64).powf(n as f64);
   return (x * scale).round() / scale;
 }
 
-fn get_relative_topology(cn: &Complex<f64>) -> f64 {
-  let mut relative_topology = (cn.im / cn.re).atan();
-  if relative_topology < 0.0 {
-    // +表示に変換
-    relative_topology += PI;
+pub fn get_relative_topology(cn: &Complex<f64>) -> f64 {
+  // TODO: エラー処理
+  if cn.re != 0.0 {
+    let mut relative_topology = (cn.im / cn.re).atan();
+    if relative_topology < 0.0 {
+      // +表示に変換
+      relative_topology += PI;
+    }
+    return relative_topology;
+  } else {
+    return 0.0;
   }
-  return relative_topology;
 }
 
-fn get_amplitude(cn: &Option<Complex<f64>>) -> Option<Amplitude> {
+pub fn get_amplitude(cn: &Option<Complex<f64>>) -> Option<Amplitude> {
   match cn {
     Some(cn) => {
       let relative_topology: f64 = get_relative_topology(cn);
@@ -63,7 +69,7 @@ fn get_amplitude(cn: &Option<Complex<f64>>) -> Option<Amplitude> {
   }
 }
 
-fn get_existence_probability(qc: Qbit) -> ExistenceProbability {
+pub fn get_existence_probability(qc: Qbit) -> ExistenceProbability {
   let zero_probability = match get_amplitude(&qc.zero) {
     Some(zero_amplitude) => zero_amplitude.magnitude.powf(2.0),
     None => 0.0,
@@ -78,7 +84,7 @@ fn get_existence_probability(qc: Qbit) -> ExistenceProbability {
   };
 }
 
-fn qc_read(qc: Qbit) -> Qbit {
+pub fn qc_read(qc: Qbit) -> Qbit {
   let ep: ExistenceProbability = get_existence_probability(qc);
 
   // 本物の量子コンピュータであれば, 本当の意味での乱数となる
@@ -94,7 +100,7 @@ fn qc_read(qc: Qbit) -> Qbit {
 }
 
 // target: ZERO_QBIT or ONE_QBIT
-fn qc_write(qc: Qbit, target_qbit: Qbit) -> Qbit {
+pub fn qc_write(qc: Qbit, target_qbit: Qbit) -> Qbit {
   // write命令は, readとnot命令で実現できる
   let read_qbit = qc_read(qc);
   if read_qbit == target_qbit {
@@ -104,7 +110,7 @@ fn qc_write(qc: Qbit, target_qbit: Qbit) -> Qbit {
   }
 }
 
-fn qc_not(qc: Qbit) -> Qbit {
+pub fn qc_not(qc: Qbit) -> Qbit {
   // swap するだけ
   return Qbit {
     zero: qc.one,
@@ -112,11 +118,31 @@ fn qc_not(qc: Qbit) -> Qbit {
   };
 }
 
-fn qc_had() {}
+pub fn qc_had(qc: Qbit) -> Qbit {
+  return match qc.zero {
+    Some(qc_zero) => match qc.one {
+      Some(qc_one) => {
+        return Qbit {
+          zero: Some((qc_zero + qc_one) / SQRT_2),
+          one: Some((qc_zero - qc_one) / SQRT_2),
+        };
+      }
+      None => Qbit {
+        zero: None,
+        one: None,
+      },
+    },
+    None => Qbit {
+      zero: None,
+      one: None,
+    },
+  };
+}
 
 // radが+の場合, 反時計回りに回転
 // TODO: 計算結果の計算誤差をどう扱うか検討
-fn qc_phase(qc: Qbit, rad: f64) -> Qbit {
+// TODO: 回転行列の利用の検討
+pub fn qc_phase(qc: Qbit, rad: f64) -> Qbit {
   match qc.one {
     Some(one) => {
       let update_relative_topology: f64 = get_relative_topology(&one) + rad;
@@ -185,4 +211,26 @@ fn qc_phase_test() {
   let phase_qc_one = phase_qc.one.unwrap();
   assert_eq!(round(phase_qc_one.re, 2), 0.0);
   assert_eq!(phase_qc_one.im, -0.5);
+}
+#[test]
+fn qc_had_test() {
+  let qc: Qbit = Qbit {
+    zero: Some(Complex::new(0.0, 0.0)),
+    one: Some(Complex::new(1.0, 0.0)),
+  };
+  let qc = qc_had(qc);
+  let zero_amplitude = get_amplitude(&qc.zero).unwrap();
+  let one_amplitude = get_amplitude(&qc.one).unwrap();
+  assert_eq!(round(zero_amplitude.magnitude, 5), 0.70711);
+  assert_eq!(zero_amplitude.relative_topology, 0.0);
+  assert_eq!(round(one_amplitude.magnitude, 5), 0.70711);
+  assert_eq!(one_amplitude.relative_topology, 0.0);
+
+  let qc = qc_had(qc);
+  let zero_amplitude = get_amplitude(&qc.zero).unwrap();
+  let one_amplitude = get_amplitude(&qc.one).unwrap();
+  assert_eq!(zero_amplitude.magnitude, 0.0);
+  assert_eq!(zero_amplitude.relative_topology, 0.0);
+  assert_eq!(round(one_amplitude.magnitude, 2), 1.0);
+  assert_eq!(one_amplitude.relative_topology, 0.0);
 }
