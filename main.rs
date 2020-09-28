@@ -8,6 +8,7 @@ struct Amplitude{
 }
 
 // 複素数
+#[derive(Debug, PartialEq)]
 struct ComplexNumber{
   real: f64,
   imaginary: f64
@@ -16,8 +17,8 @@ struct ComplexNumber{
 // キュービット
 #[derive(Debug, PartialEq)]
 struct Qbit{ // zero + one <= 1
-  zero: Amplitude, // zero <= 1
-  one: Amplitude // one <= 1
+  zero: Option<ComplexNumber>, // zero <= 1
+  one: Option<ComplexNumber> // one <= 1
 }
 
 // フォトンが検出される確率
@@ -28,31 +29,62 @@ struct ExistenceProbability{
 }
 
 const ZERO_QBIT: Qbit = Qbit {
-  zero: Amplitude{
-    magnitude: 1.0,
-    relative_topology: 0.0
-  },
-  one: Amplitude{
-    magnitude: 0.0,
-    relative_topology: 0.0
-  }
+  zero: Some(ComplexNumber{
+    real: 1.0,
+    imaginary: 0.0
+  }),
+  one: None
 };
 
 const ONE_QBIT: Qbit = Qbit {
-  zero: Amplitude{
-    magnitude: 0.0,
-    relative_topology: 0.0
-  },
-  one: Amplitude{
-    magnitude: 1.0,
-    relative_topology: 0.0
-  }
+  zero: None,
+  one: Some(ComplexNumber{
+    real: 1.0,
+    imaginary: 0.0
+  })
 };
 
+const PI: f64 = std::f64::consts::PI;
+const TWO_PI: f64 = 2.0 * PI;
+
+fn round(x:f64, n: u8) -> f64 {
+  let scale = (10.0 as f64).powf(n as f64);
+  return (x * scale).round() / scale
+} 
+
+fn get_relative_topology(cn: &ComplexNumber) -> f64 {
+  let mut relative_topology = (cn.imaginary/cn.real).atan();
+  if relative_topology < 0.0 { // +表示に変換
+    relative_topology += PI;
+  }
+  return relative_topology;
+}
+
+fn get_amplitude(cn: &Option<ComplexNumber>) -> Option<Amplitude> {
+  match cn {
+    Some(cn) => {
+      let relative_topology: f64 = get_relative_topology(cn);
+      return Some(Amplitude {
+        magnitude: (cn.real.powf(2.0) + cn.imaginary.powf(2.0)).sqrt(),
+        relative_topology: relative_topology 
+      })
+    },
+    None => None
+  } 
+}
+
 fn get_existence_probability(qc: Qbit) -> ExistenceProbability{
+  let zero_probability = match get_amplitude(&qc.zero){
+    Some(zero_amplitude) => zero_amplitude.magnitude.powf(2.0),
+    None => 0.0
+  };
+  let one_probability = match get_amplitude(&qc.one){
+    Some(one_amplitude) => one_amplitude.magnitude.powf(2.0),
+    None => 0.0
+  };
   return ExistenceProbability{
-    zero: qc.zero.magnitude.powf(2.0),
-    one: qc.one.magnitude.powf(2.0)
+    zero: zero_probability,
+    one: one_probability
   }
 }
 
@@ -91,57 +123,118 @@ fn qc_not(qc: Qbit) -> Qbit{
 
 fn qc_had(){}
 
-fn qc_phase(){}
+// radが+の場合, 反時計回りに回転
+// TODO: 計算結果の計算誤差をどう扱うか検討
+fn qc_phase(qc: Qbit, rad: f64) -> Qbit{
+  match qc.one {
+    Some(one) => {
+      let update_relative_topology: f64 = get_relative_topology(&one) + rad;
+      return Qbit {
+        zero: qc.zero,
+        one: Some(ComplexNumber{
+          real: one.real * update_relative_topology.cos(),
+          imaginary: one.real * update_relative_topology.sin()
+        })
+      }
+    },
+    None => 
+      Qbit {
+        zero: None,
+        one: None
+      }
+  }
+}
 
 fn main() {
   let qc: Qbit = Qbit {
-    zero: Amplitude{
-      magnitude: 0.707,
-      relative_topology: 0.0
-    },
-    one: Amplitude{
-      magnitude: 0.707,
-      relative_topology: 0.0
-    }
+    zero: Some(ComplexNumber{
+      real: 0.5,
+      imaginary: 0.0
+    }),
+    one: Some(ComplexNumber{
+      real: 0.5,
+      imaginary: 0.0
+    })
   };
-
-  println!("{:?}", qc_write(qc, ONE_QBIT))
+  println!("{:?}\n", round(1.23456, 2));
 }
 
 #[test]
 fn qc_not_test() {
-  // あくまでもテスト用のQbit
-  let qc = Qbit {
-    zero: Amplitude{
-      magnitude: 0.1,
-      relative_topology: 0.2
-    },
-    one: Amplitude{
-      magnitude: 0.3,
-      relative_topology: 0.4
-    }
+  let qc: Qbit = Qbit {
+    zero: Some(ComplexNumber{
+      real: 0.1,
+      imaginary: 0.2
+    }),
+    one: Some(ComplexNumber{
+      real: 0.3,
+      imaginary: 0.4
+    })
   };
   let not_qc = qc_not(qc);
-  assert_eq!(not_qc.zero.magnitude, 0.3);
-  assert_eq!(not_qc.zero.relative_topology, 0.4);
-  assert_eq!(not_qc.one.magnitude, 0.1);
-  assert_eq!(not_qc.one.relative_topology, 0.2);
+  let not_qc_zero = not_qc.zero.unwrap();
+  let not_qc_one = not_qc.one.unwrap();
+  assert_eq!(not_qc_zero.real, 0.3);
+  assert_eq!(not_qc_zero.imaginary, 0.4);
+  assert_eq!(not_qc_one.real, 0.1);
+  assert_eq!(not_qc_one.imaginary, 0.2);
 }
 
 #[test]
 fn qc_write_test() {
   let qc: Qbit = Qbit {
-    zero: Amplitude{
-      magnitude: 0.707,
-      relative_topology: 0.0
-    },
-    one: Amplitude{
-      magnitude: 0.707,
-      relative_topology: 0.0
-    }
+    zero: Some(ComplexNumber{
+      real: 0.1,
+      imaginary: 0.2
+    }),
+    one: Some(ComplexNumber{
+      real: 0.3,
+      imaginary: 0.4
+    })
   };
   let zero = qc_write(qc, ZERO_QBIT);
   assert_eq!(zero, ZERO_QBIT);
   let one = qc_write(zero, ONE_QBIT);
   assert_eq!(one, ONE_QBIT);
+}
+
+#[test]
+fn qc_phase_test() {
+  let qc: Qbit = Qbit {
+    zero: Some(ComplexNumber{
+      real: 0.5,
+      imaginary: 0.0
+    }),
+    one: Some(ComplexNumber{
+      real: 0.5,
+      imaginary: 0.0
+    })
+  };
+  let phase_qc = qc_phase(qc, PI/2.0);
+  let phase_qc_zero = phase_qc.zero.unwrap();
+  assert_eq!(phase_qc_zero.real, 0.5);
+  assert_eq!(phase_qc_zero.imaginary, 0.0);
+  
+  let phase_qc_one = phase_qc.one.unwrap();
+  assert_eq!(round(phase_qc_one.real, 2), 0.0);
+  assert_eq!(phase_qc_one.imaginary, 0.5);
+
+  let qc: Qbit = Qbit {
+    zero: Some(ComplexNumber{
+      real: 0.5,
+      imaginary: 0.0
+    }),
+    one: Some(ComplexNumber{
+      real: 0.5,
+      imaginary: 0.0
+    })
+  };
+  let phase_qc = qc_phase(qc, (-PI)/2.0);
+  let phase_qc_zero = phase_qc.zero.unwrap();
+  assert_eq!(phase_qc_zero.real, 0.5);
+  assert_eq!(phase_qc_zero.imaginary, 0.0);
+  
+  let phase_qc_one = phase_qc.one.unwrap();
+  assert_eq!(round(phase_qc_one.real, 2), 0.0);
+  assert_eq!(phase_qc_one.imaginary, -0.5);
 }
